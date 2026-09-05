@@ -84,8 +84,8 @@ class P2PNode:
                 if msg.startswith("/connect"):
                     parts = msg.split()
                     if len(parts) == 3:
-                        p_host = parts
-                        p_port = int(parts)
+                        p_host = parts[1]  # Исправлено: берем строку IP
+                        p_port = int(parts[2])  # Исправлено: берем строку порта и переводим в число
                         self.connect_to_peer(p_host, p_port)
                     else:
                         print("Использование: /connect [IP] [порт]")
@@ -107,9 +107,10 @@ class P2PNode:
 if __name__ == "__main__":
     print("=== P2P МЕНЕДЖЕР СЕТИ ===")
     
-    # === УКАЖИТЕ ВАШ IP-АДРЕС ЗДЕСЬ ===
-    # Например: '127.0.0.1' для тестов локально, или публичный IP вашего сервера
-    HOST = '127.0.0.1' 
+    # === ВСТАВЬТЕ СЮДА ВАШ IP ===
+    # '0.0.0.0' — слушает все сети (включая ZeroTier). 
+
+    HOST = '0.0.0.0' 
     
     # Запрашиваем порт у пользователя прямо в консоли при старте программы
     while True:
@@ -122,4 +123,3 @@ if __name__ == "__main__":
 
     node = P2PNode(HOST, PORT)
     node.start()
-

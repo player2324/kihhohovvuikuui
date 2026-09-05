@@ -14,7 +14,9 @@ class P2PNode:
         self.server.bind((self.host, self.port))
         self.server.listen(5)
 
-        print(f"[*] Нода запущена на {self.host}:{self.port}")
+        print(f"\n[*] Нода успешно запущена!")
+        print(f"[*] Ваш адрес для подключения других пиров: {self.host}:{self.port}")
+        print("-" * 50)
 
     def start(self):
         # Поток для приема входящих подключений
@@ -30,14 +32,12 @@ class P2PNode:
         send_thread.join()
 
     def listen_for_connections(self):
-        """Ожидание и прием подключений от других нод."""
         while True:
             try:
                 conn, addr = self.server.accept()
                 print(f"\n[+] Новое подключение от пира {addr[0]}:{addr[1]}")
                 self.peers.append(conn)
                 
-                # Запускаем поток для чтения сообщений от этого пира
                 peer_thread = threading.Thread(target=self.handle_peer, args=(conn, addr), daemon=True)
                 peer_thread.start()
             except Exception as e:
@@ -45,7 +45,6 @@ class P2PNode:
                 break
 
     def handle_peer(self, conn, addr):
-        """Обработка входящих сообщений от конкретного пира."""
         while True:
             try:
                 data = conn.recv(1024)
@@ -61,29 +60,27 @@ class P2PNode:
         conn.close()
 
     def connect_to_peer(self, peer_host, peer_port):
-        """Инициализация подключения к другой ноде."""
         try:
             conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             conn.connect((peer_host, peer_port))
             self.peers.append(conn)
             print(f"[+] Успешно подключено к пиру {peer_host}:{peer_port}")
             
-            # Поток для чтения ответов от этого пира
             peer_thread = threading.Thread(target=self.handle_peer, args=(conn, (peer_host, peer_port)), daemon=True)
             peer_thread.start()
         except Exception as e:
             print(f"[-] Не удалось подключиться к {peer_host}:{peer_port}. Ошибка: {e}")
 
     def send_messages_loop(self):
-        """Цикл отправки сообщений или команд из консоли."""
-        print("Доступные команды:\n/connect [host] [port] — подключиться к пиру\n[текст] — отправить сообщение всем пирам\n")
+        print("Доступные команды:")
+        print("  /connect [IP] [порт] — подключиться к новому пиру")
+        print("  [любой текст]        — отправить сообщение всем пирам\n")
         while True:
             try:
                 msg = input()
                 if not msg:
                     continue
                 
-                # Обработка команды подключения
                 if msg.startswith("/connect"):
                     parts = msg.split()
                     if len(parts) == 3:
@@ -91,15 +88,13 @@ class P2PNode:
                         p_port = int(parts[2])
                         self.connect_to_peer(p_host, p_port)
                     else:
-                        print("Использование: /connect [host] [port]")
+                        print("Использование: /connect [IP] [порт]")
                 else:
-                    # Рассылка сообщения всем подключенным пирам (Broadcast)
                     self.broadcast(msg)
             except Exception as e:
                 print(f"[-] Ошибка ввода/отправки: {e}")
 
     def broadcast(self, message):
-        """Отправка сообщения всем известным пирам."""
         encoded_msg = message.encode('utf-8')
         for peer in list(self.peers):
             try:
@@ -108,14 +103,34 @@ class P2PNode:
                 self.peers.remove(peer)
                 peer.close()
 
+def get_local_ip():
+    """Автоматически определяет IP-адрес компьютера в локальной сети."""
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        # Используем публичный DNS-адрес, чтобы узнать свой сетевой интерфейс.
+        # Реального подключения не происходит.
+        s.connect(('8.8.8.8', 1))
+        local_ip = s.getsockname()[0]
+    except Exception:
+        local_ip = '127.0.0.1'
+    finally:
+        s.close()
+    return local_ip
+
 if __name__ == "__main__":
-    # Запуск скрипта. Передайте порт как аргумент, например: python p2p_manager.py 5001
-    if len(sys.argv) < 2:
-        print("Пожалуйста, укажите порт для запуска ноды. Пример: python p2p_manager.py 5001")
-        sys.exit(1)
-        
-    PORT = int(sys.argv[1])
-    HOST = '127.0.0.1'  # Для теста на одной машине используем localhost
+    print("=== P2P МЕНЕДЖЕР СЕТИ ===")
     
+    # Автоматически определяем локальный IP
+    HOST = get_local_ip()
+    
+    # Запрашиваем порт у пользователя прямо в консоли при старте программы
+    while True:
+        try:
+            port_input = input("Введите порт для этой ноды (например, 5001): ").strip()
+            PORT = int(port_input)
+            break
+        except ValueError:
+            print("Ошибка: Порт должен быть числом. Попробуйте еще раз.")
+
     node = P2PNode(HOST, PORT)
     node.start()

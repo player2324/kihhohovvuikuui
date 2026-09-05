@@ -35,7 +35,7 @@ class P2PNode:
         while True:
             try:
                 conn, addr = self.server.accept()
-                print(f"\n[+] Новое подключение от пира {addr[0]}:{addr[1]}")
+                print(f"\n[+] Новое подключение от пира {addr}:{addr}")
                 self.peers.append(conn)
                 
                 peer_thread = threading.Thread(target=self.handle_peer, args=(conn, addr), daemon=True)
@@ -50,11 +50,11 @@ class P2PNode:
                 data = conn.recv(1024)
                 if not data:
                     break
-                print(f"\n[{addr[0]}:{addr[1]}]: {data.decode('utf-8')}")
+                print(f"\n[{addr}:{addr}]: {data.decode('utf-8')}")
             except (ConnectionResetError, ConnectionAbortedError):
                 break
         
-        print(f"\n[-] Пир {addr[0]}:{addr[1]} отключился.")
+        print(f"\n[-] Пир {addr}:{addr} отключился.")
         if conn in self.peers:
             self.peers.remove(conn)
         conn.close()
@@ -84,8 +84,8 @@ class P2PNode:
                 if msg.startswith("/connect"):
                     parts = msg.split()
                     if len(parts) == 3:
-                        p_host = parts[1]
-                        p_port = int(parts[2])
+                        p_host = parts
+                        p_port = int(parts)
                         self.connect_to_peer(p_host, p_port)
                     else:
                         print("Использование: /connect [IP] [порт]")
@@ -103,25 +103,13 @@ class P2PNode:
                 self.peers.remove(peer)
                 peer.close()
 
-def get_local_ip():
-    """Автоматически определяет IP-адрес компьютера в локальной сети."""
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    try:
-        # Используем публичный DNS-адрес, чтобы узнать свой сетевой интерфейс.
-        # Реального подключения не происходит.
-        s.connect(('8.8.8.8', 1))
-        local_ip = s.getsockname()[0]
-    except Exception:
-        local_ip = '127.0.0.1'
-    finally:
-        s.close()
-    return local_ip
 
 if __name__ == "__main__":
     print("=== P2P МЕНЕДЖЕР СЕТИ ===")
     
-    # Автоматически определяем локальный IP
-    HOST = get_local_ip()
+    # === УКАЖИТЕ ВАШ IP-АДРЕС ЗДЕСЬ ===
+    # Например: '127.0.0.1' для тестов локально, или публичный IP вашего сервера
+    HOST = '127.0.0.1' 
     
     # Запрашиваем порт у пользователя прямо в консоли при старте программы
     while True:
@@ -134,3 +122,4 @@ if __name__ == "__main__":
 
     node = P2PNode(HOST, PORT)
     node.start()
+
